@@ -1,0 +1,35 @@
+plugins {
+    id 'java'
+}
+
+group 'org.codingdojo.kata'
+version '1.0-SNAPSHOT'
+
+repositories {
+    mavenCentral()
+}
+
+dependencies {
+    implementation group: 'com.google.guava', name: 'guava', version: '28.1-jre'
+    implementation('jakarta.inject:jakarta.inject-api:2.0.1.MR')
+    testImplementation group: 'org.assertj', name: 'assertj-core', version: '3.14.0'
+    testImplementation("org.junit.jupiter:junit-jupiter-api:5.8.2")
+    testImplementation("org.junit.jupiter:junit-jupiter-params:5.8.2")
+    testRuntimeOnly("org.junit.jupiter:junit-jupiter-engine:5.8.2")
+    testRuntimeOnly("org.junit.vintage:junit-vintage-engine:5.8.2")
+    testRuntimeOnly("org.junit.platform:junit-platform-runner:1.8.2")
+    testImplementation('org.mockito:mockito-core:4.4.0')
+    testImplementation("jakarta.inject:jakarta.inject-tck:2.0.1")
+}
+
+test() {
+    useJUnitPlatform()
+}
+
+wrapper {
+    gradleVersion = '7.0.0'
+}
+java {
+    sourceCompatibility = JavaVersion.VERSION_17
+    targetCompatibility = JavaVersion.VERSION_17
+}

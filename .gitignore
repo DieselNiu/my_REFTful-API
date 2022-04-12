@@ -1,0 +1,6 @@
+.gralde/
+.idea/
+build/
+gradle/
+out/
+/.gradle/checksums/md5-checksums.bin
