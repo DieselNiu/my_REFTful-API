@@ -16,7 +16,7 @@ public class Context {
 
 	public <T, I extends T> void bind(Class<T> type, Class<I> implementation) {
 		Constructor<I> constructor = getInjectConstructor(implementation);
-		providers.put(type, new ConstructorInjection<>(constructor));
+		providers.put(type, new ConstructorInjection<>(type,constructor));
 	}
 
 
@@ -38,20 +38,25 @@ public class Context {
 	}
 
 	class ConstructorInjection<T> implements Provider<T> {
+		private Class<?> componentType;
 		private Constructor<T> constructor;
 		private boolean constructing = false;
 
-		public ConstructorInjection(Constructor<T> constructor) {
+
+		public ConstructorInjection(Class<?> component, Constructor<T> constructor) {
+			this.componentType = component;
 			this.constructor = constructor;
 		}
 
 		@Override
 		public T get() {
-			if (constructing) throw new CyclicDependenciesFoundException();
+			if (constructing) throw new CyclicDependenciesFoundException(componentType);
 			try {
 				constructing = true;
-				Object[] dependencies = Arrays.stream(constructor.getParameters()).map(c -> Context.this.get(c.getType()).orElseThrow(DependencyNotFoundException::new)).toArray(Object[]::new);
+				Object[] dependencies = Arrays.stream(constructor.getParameters()).map(c -> Context.this.get(c.getType()).orElseThrow(() -> new DependencyNotFoundException(componentType, c.getType()))).toArray(Object[]::new);
 				return constructor.newInstance(dependencies);
+			}catch (CyclicDependenciesFoundException e) {
+				throw new CyclicDependenciesFoundException(componentType,e);
 			} catch (InvocationTargetException | InstantiationException | IllegalAccessException e) {
 				throw new RuntimeException(e);
 			} finally {
