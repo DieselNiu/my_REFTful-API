@@ -27,6 +27,12 @@ public class ContainerTest {
 
 	}
 
+	@Test
+	public void should_return_empty_if_component_not_defined() {
+		Optional<Component> component = context.get(Component.class);
+		assertTrue(component.isEmpty());
+	}
+
 
 	@Nested
 	public class ComponentConstructor {
@@ -83,11 +89,22 @@ public class ContainerTest {
 				assertThrows(DependencyNotFoundException.class, () -> context.get(Component.class).get());
 			}
 
+
 			@Test
-			public void should_() {
-				Optional<Component> component = context.get(Component.class);
-				assertTrue(component.isEmpty());
+			public void should_throw_exception_if_cyclic_dependencies_found() {
+				context.bind(Component.class, ComponentWithInjectConstructor.class);
+				context.bind(Dependency.class, DependencyDependedOnComponent.class);
+				assertThrows(CyclicDependenciesFoundException.class, () -> context.get(Component.class));
 			}
+
+			@Test
+			public void should_throw_exception_if_transitive_dependencies_found() {
+				context.bind(Component.class,ComponentWithInjectConstructor.class);
+				context.bind(Dependency.class,DependencyDependedOnAnotherDependency.class);
+				context.bind(AnotherDependency.class,AnotherDependencyDependedOnComponent.class);
+				assertThrows(CyclicDependenciesFoundException.class,()->context.get(Component.class));
+			}
+
 
 		}
 
@@ -122,6 +139,36 @@ interface Dependency {
 
 }
 
+interface AnotherDependency {
+
+}
+
+class DependencyDependedOnAnotherDependency implements Dependency {
+	private AnotherDependency anotherDependency;
+
+	@Inject
+	public DependencyDependedOnAnotherDependency(AnotherDependency anotherDependency) {
+		this.anotherDependency = anotherDependency;
+	}
+
+	public AnotherDependency getAnotherDependency() {
+		return anotherDependency;
+	}
+}
+
+class AnotherDependencyDependedOnComponent implements AnotherDependency{
+	private Component component;
+
+	@Inject
+	public AnotherDependencyDependedOnComponent(Component component) {
+		this.component = component;
+	}
+
+
+	public Component getComponent() {
+		return component;
+	}
+}
 
 class ComponentWithDefaultConstructor implements Component {
 	public ComponentWithDefaultConstructor() {
@@ -175,3 +222,11 @@ class ComponentWithNoInjectNorDefaultConstructor implements Component {
 	}
 }
 
+class DependencyDependedOnComponent implements Dependency {
+	private Component component;
+
+	@Inject
+	public DependencyDependedOnComponent(Component component) {
+		this.component = component;
+	}
+}
