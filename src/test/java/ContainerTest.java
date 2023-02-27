@@ -98,7 +98,7 @@ public class ContainerTest {
 			public void should_throw_exception_if_transitive_dependency_not_found(){
 				config.bind(Component.class, ComponentWithInjectConstructor.class);
 				config.bind(Dependency.class, DependencyWithInjectConstructor.class);
-				DependencyNotFoundException exception = assertThrows(DependencyNotFoundException.class, () -> config.getContext().get(Component.class).get());
+				DependencyNotFoundException exception = assertThrows(DependencyNotFoundException.class, () -> config.getContext());
 				assertThat(exception.getDependency()).isEqualTo(String.class);
 				assertThat(exception.getComponent()).isEqualTo(Dependency.class);
 			}
@@ -108,7 +108,7 @@ public class ContainerTest {
 			public void should_throw_exception_if_cyclic_dependencies_found() {
 				config.bind(Component.class, ComponentWithInjectConstructor.class);
 				config.bind(Dependency.class, DependencyDependedOnComponent.class);
-				CyclicDependenciesFoundException exception = assertThrows(CyclicDependenciesFoundException.class, () -> config.getContext().get(Component.class));
+				CyclicDependenciesFoundException exception = assertThrows(CyclicDependenciesFoundException.class, () -> config.getContext());
 				Set<Class<?>> classes = Sets.newSet(exception.getComponents());
 				assertThat(classes.size()).isEqualTo(2);
 				assertTrue(classes.contains(Dependency.class));
@@ -116,11 +116,11 @@ public class ContainerTest {
 			}
 
 			@Test
-			public void should_throw_exception_if_transitive_dependencies_found() {
+			public void should_throw_exception_if_transitive_cyclic_dependencies_found() {
 				config.bind(Component.class,ComponentWithInjectConstructor.class);
 				config.bind(Dependency.class,DependencyDependedOnAnotherDependency.class);
 				config.bind(AnotherDependency.class,AnotherDependencyDependedOnComponent.class);
-				CyclicDependenciesFoundException exception = assertThrows(CyclicDependenciesFoundException.class, () -> config.getContext().get(Component.class));
+				CyclicDependenciesFoundException exception = assertThrows(CyclicDependenciesFoundException.class, () -> config.getContext());
 				List<Class<?>> classes = Lists.newArrayList(exception.getComponents());
 				assertThat(classes.size()).isEqualTo(3);
 				assertTrue(classes.contains(Dependency.class));
