@@ -5,7 +5,9 @@ import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 import org.mockito.internal.util.collections.Sets;
 
-import java.util.*;
+import java.util.List;
+import java.util.Optional;
+import java.util.Set;
 
 import static org.assertj.core.api.AssertionsForClassTypes.assertThat;
 import static org.junit.jupiter.api.Assertions.*;
@@ -95,7 +97,7 @@ public class ContainerTest {
 
 
 			@Test
-			public void should_throw_exception_if_transitive_dependency_not_found(){
+			public void should_throw_exception_if_transitive_dependency_not_found() {
 				config.bind(Component.class, ComponentWithInjectConstructor.class);
 				config.bind(Dependency.class, DependencyWithInjectConstructor.class);
 				DependencyNotFoundException exception = assertThrows(DependencyNotFoundException.class, () -> config.getContext());
@@ -117,9 +119,9 @@ public class ContainerTest {
 
 			@Test
 			public void should_throw_exception_if_transitive_cyclic_dependencies_found() {
-				config.bind(Component.class,ComponentWithInjectConstructor.class);
-				config.bind(Dependency.class,DependencyDependedOnAnotherDependency.class);
-				config.bind(AnotherDependency.class,AnotherDependencyDependedOnComponent.class);
+				config.bind(Component.class, ComponentWithInjectConstructor.class);
+				config.bind(Dependency.class, DependencyDependedOnAnotherDependency.class);
+				config.bind(AnotherDependency.class, AnotherDependencyDependedOnComponent.class);
 				CyclicDependenciesFoundException exception = assertThrows(CyclicDependenciesFoundException.class, () -> config.getContext());
 				List<Class<?>> classes = Lists.newArrayList(exception.getComponents());
 				assertThat(classes.size()).isEqualTo(3);
@@ -132,12 +134,64 @@ public class ContainerTest {
 
 
 		@Nested
-		public class MethodInjection {
+		public class FieldInjection {
+			//TODO: inject field
+			//TODO: throw exception if dependency not found
+			//TODO: throw exception if field is final
+			//TODO: throw exception if cyclic dependency
+			//TODO: provide dependency information for field injection
+
+			static class ComponentWithFieldInjection {
+				@Inject
+				Dependency dependency;
+			}
+
+			static class SubclassWithFieldInjection extends ComponentWithFieldInjection {
+			}
+
+			@Test
+			public void should_inject_dependency_via_field() {
+				Dependency dependency = new Dependency() {};
+				config.bind(Dependency.class, dependency);
+				config.bind(ComponentWithFieldInjection.class, ComponentWithFieldInjection.class);
+				ComponentWithFieldInjection component = config.getContext().get(ComponentWithFieldInjection.class).get();
+				assertSame(dependency, component.dependency);
+			}
+
+
+			@Test
+			public void should_inject_dependency_via_superclass_inject_fields() {
+				Dependency dependency = new Dependency() {};
+				config.bind(Dependency.class, dependency);
+				config.bind(SubclassWithFieldInjection.class, SubclassWithFieldInjection.class);
+				ComponentWithFieldInjection component = config.getContext().get(SubclassWithFieldInjection.class).get();
+				assertSame(dependency, component.dependency);
+			}
+
+//			@Test
+//			public void should_create_component_with_injection_field() {
+//				Context context = Mockito.mock(Context.class);
+//				Dependency dependency = Mockito.mock(Dependency.class);
+//				when(context.get(eq(Dependency.class)))
+//					.thenReturn(Optional.of(dependency));
+//
+//				ConstructorInjectionProvider<ComponentWithFieldInjection> provider = new ConstructorInjectionProvider<>(ComponentWithFieldInjection.class);
+//				ComponentWithFieldInjection component = provider.get(context);
+//				assertSame(dependency, component.dependency);
+//			}
+
+
+			@Test
+			public void should_throw_exception_when_field_dependency_missing() {
+				ConstructorInjectionProvider<ComponentWithFieldInjection> provider = new ConstructorInjectionProvider<>(ComponentWithFieldInjection.class);
+				assertArrayEquals(new Class<?>[]{Dependency.class}, provider.getDependencies().toArray(Class<?>[]::new));
+			}
+
 
 		}
 
 		@Nested
-		public class FieldInjection {
+		public class MethodInjection {
 
 		}
 	}
@@ -178,7 +232,7 @@ class DependencyDependedOnAnotherDependency implements Dependency {
 	}
 }
 
-class AnotherDependencyDependedOnComponent implements AnotherDependency{
+class AnotherDependencyDependedOnComponent implements AnotherDependency {
 	private Component component;
 
 	@Inject
