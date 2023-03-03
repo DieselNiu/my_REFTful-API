@@ -78,6 +78,25 @@ public class ContainerTest {
 				assertEquals("indirect dependency", ((DependencyWithInjectConstructor) dependency).getDependency());
 			}
 
+
+			abstract class AbstractComponent implements Component {
+				@Inject
+				public AbstractComponent() {
+
+				}
+			}
+
+			@Test
+			public void should_throw_exception_if_component_is_abstract() {
+				assertThrows(IllegalComponentException.class, () -> new ConstructorInjectionProvider<>(AbstractComponent.class));
+			}
+
+			@Test
+			public void should_throw_exception_if_component_is_interface() {
+				assertThrows(IllegalComponentException.class, () -> new ConstructorInjectionProvider<>(Component.class));
+			}
+
+
 			@Test
 			public void should_throw_exception_if_multi_inject_constructor_provided() {
 				assertThrows(IllegalComponentException.class, () -> config.bind(Component.class, ComponentWithMultiInjectConstructor.class));
@@ -135,11 +154,16 @@ public class ContainerTest {
 
 		@Nested
 		public class FieldInjection {
-			//TODO: inject field
-			//TODO: throw exception if dependency not found
-			//TODO: throw exception if field is final
-			//TODO: throw exception if cyclic dependency
-			//TODO: provide dependency information for field injection
+			static class FinalInjectField {
+				@Inject
+				final Dependency dependency = null;
+			}
+
+			@Test
+			public void should_throw_exception_if_inject_field_is_final() {
+				assertThrows(IllegalComponentException.class, () -> new ConstructorInjectionProvider<>(FinalInjectField.class));
+			}
+
 
 			static class ComponentWithFieldInjection {
 				@Inject
@@ -168,18 +192,6 @@ public class ContainerTest {
 				assertSame(dependency, component.dependency);
 			}
 
-//			@Test
-//			public void should_create_component_with_injection_field() {
-//				Context context = Mockito.mock(Context.class);
-//				Dependency dependency = Mockito.mock(Dependency.class);
-//				when(context.get(eq(Dependency.class)))
-//					.thenReturn(Optional.of(dependency));
-//
-//				ConstructorInjectionProvider<ComponentWithFieldInjection> provider = new ConstructorInjectionProvider<>(ComponentWithFieldInjection.class);
-//				ComponentWithFieldInjection component = provider.get(context);
-//				assertSame(dependency, component.dependency);
-//			}
-
 
 			@Test
 			public void should_throw_exception_when_field_dependency_missing() {
@@ -201,7 +213,6 @@ public class ContainerTest {
 				}
 			}
 
-			//TODO: inject method with no dependency will be called
 			@Test
 			public void should_call_inject_method_even_if_no_dependency_declared() {
 				config.bind(InjectMethodWithNoDependency.class, InjectMethodWithNoDependency.class);
@@ -209,7 +220,6 @@ public class ContainerTest {
 				assertTrue(dependency.called);
 			}
 
-			//TODO: inject method with dependencies will be injected
 			static class InjectMethodWithDependency {
 				Dependency dependency;
 
@@ -229,7 +239,6 @@ public class ContainerTest {
 			}
 
 
-			//TODO: override inject method from superclass
 			static class SuperClassWithInjectMethod {
 				int superCalled = 0;
 
@@ -252,43 +261,41 @@ public class ContainerTest {
 			public void should_inject_dependencies_via_inject_method_from_superclass() {
 				config.bind(SubclassWithInjectMethod.class, SubclassWithInjectMethod.class);
 				SubclassWithInjectMethod injectMethod = config.getContext().get(SubclassWithInjectMethod.class).get();
-				assertEquals(1,injectMethod.superCalled);
-				assertEquals(2,injectMethod.subCalled);
+				assertEquals(1, injectMethod.superCalled);
+				assertEquals(2, injectMethod.subCalled);
 			}
 
-			static class SubclassOverrideSuperClassWithInject extends SuperClassWithInjectMethod{
+			static class SubclassOverrideSuperClassWithInject extends SuperClassWithInjectMethod {
 				@Inject
 				void install() {
 					super.install();
 				}
 			}
-			
-			
+
+
 			@Test
-			public void should_only_call_once_if_subclass_inject_method_with_inject(){
-				config.bind(SubclassOverrideSuperClassWithInject.class,SubclassOverrideSuperClassWithInject.class);
+			public void should_only_call_once_if_subclass_inject_method_with_inject() {
+				config.bind(SubclassOverrideSuperClassWithInject.class, SubclassOverrideSuperClassWithInject.class);
 				SubclassOverrideSuperClassWithInject component = config.getContext().get(SubclassOverrideSuperClassWithInject.class).get();
-				assertEquals(1,component.superCalled);
-			    
+				assertEquals(1, component.superCalled);
+
 			}
 
 
-			//TODO: include dependencies from inject methods
 
 			static class SubclassOverrideSuperClassWithNoInject extends SuperClassWithInjectMethod {
 				void install() {
 					super.install();
 				}
 			}
-			
+
 			@Test
-			public void should_not_call_inject_method_if_override_with_no_inject(){
-				config.bind(SubclassOverrideSuperClassWithNoInject.class,SubclassOverrideSuperClassWithNoInject.class);
+			public void should_not_call_inject_method_if_override_with_no_inject() {
+				config.bind(SubclassOverrideSuperClassWithNoInject.class, SubclassOverrideSuperClassWithNoInject.class);
 				SubclassOverrideSuperClassWithNoInject component = config.getContext().get(SubclassOverrideSuperClassWithNoInject.class).get();
-				assertEquals(0 ,component.superCalled);
+				assertEquals(0, component.superCalled);
 
 			}
-
 
 
 			@Test
@@ -297,7 +304,18 @@ public class ContainerTest {
 				assertArrayEquals(new Class<?>[]{Dependency.class}, provider.getDependencies().toArray(Class<?>[]::new));
 
 			}
-			//TODO: throw exception if type parameter defined
+			static class InjectMethodWithTypeParameter {
+				@Inject
+				<T> void install() {
+					
+				}
+			}
+			
+			@Test
+			public void should_throw_exception_if_inject_method_has_type_parameter(){
+			  assertThrows(IllegalComponentException.class,()->new ConstructorInjectionProvider<>(InjectMethodWithTypeParameter.class));
+			}
+
 
 
 		}

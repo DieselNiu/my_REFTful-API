@@ -8,6 +8,7 @@ import java.util.List;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
+import static java.util.Arrays.compare;
 import static java.util.Arrays.stream;
 import static java.util.stream.Stream.concat;
 
@@ -17,9 +18,13 @@ class ConstructorInjectionProvider<T> implements ContextConfig.ComponentProvider
 	private List<Method> injectMethods;
 
 	public ConstructorInjectionProvider(Class<T> implementation) {
+		if (Modifier.isAbstract(implementation.getModifiers())) throw new IllegalComponentException();
 		this.constructor = getInjectConstructor(implementation);
 		this.injectFields = getInjectFields(implementation);
 		this.injectMethods = getInjectMethods(implementation);
+
+		if (injectFields.stream().anyMatch(x -> Modifier.isFinal(x.getModifiers()))) throw new IllegalComponentException();
+		if (injectMethods.stream().anyMatch(m -> m.getTypeParameters().length != 0)) throw new IllegalComponentException();
 	}
 
 
@@ -53,12 +58,12 @@ class ConstructorInjectionProvider<T> implements ContextConfig.ComponentProvider
 		Class<?> current = implementation;
 		while (current != Object.class) {
 			injectMethods.addAll(stream(current.getDeclaredMethods()).filter(m -> m.isAnnotationPresent(Inject.class))
-				.filter(m->injectMethods.stream().noneMatch(o->o.getName().equals(m.getName()) && Arrays.equals(o.getParameterTypes(),m.getParameterTypes())))
-				.filter(m-> stream(implementation.getDeclaredMethods()).filter(m1->!m1.isAnnotationPresent(Inject.class))
-					.noneMatch(o->o.getName().equals(m.getName()) && Arrays.equals(o.getParameterTypes(),m.getParameterTypes()))).toList());
+				.filter(m -> injectMethods.stream().noneMatch(o -> o.getName().equals(m.getName()) && Arrays.equals(o.getParameterTypes(), m.getParameterTypes())))
+				.filter(m -> stream(implementation.getDeclaredMethods()).filter(m1 -> !m1.isAnnotationPresent(Inject.class))
+					.noneMatch(o -> o.getName().equals(m.getName()) && Arrays.equals(o.getParameterTypes(), m.getParameterTypes()))).toList());
 			current = current.getSuperclass();
 		}
-		 Collections.reverse(injectMethods);
+		Collections.reverse(injectMethods);
 		return injectMethods;
 	}
 
