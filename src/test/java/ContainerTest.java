@@ -23,6 +23,42 @@ public class ContainerTest {
 	@Nested
 	public class ComponentConstructor {
 
+		@Test
+		public void should_bind_type_to_a_class_with_default_constructor() {
+			config.bind(Component.class, ComponentWithDefaultConstructor.class);
+			Component instance = config.getContext().get(Component.class).get();
+			assertNotNull(instance);
+			assertTrue(instance instanceof ComponentWithDefaultConstructor);
+		}
+
+
+		@Test
+		public void should_bind_type_to_a_class_with_inject_constructor() {
+			config.bind(Component.class, ComponentWithInjectConstructor.class);
+			Dependency dependency = new Dependency() {};
+			config.bind(Dependency.class, dependency);
+			Component instance = config.getContext().get(Component.class).get();
+			assertNotNull(instance);
+			Dependency dependency1 = ((ComponentWithInjectConstructor) instance).getDependency();
+			assertNotNull(dependency1);
+			assertSame(dependency, dependency1);
+		}
+
+		@Test
+		public void should_bind_type_to_a_class_with_transitive_dependency() {
+			config.bind(Component.class, ComponentWithInjectConstructor.class);
+			config.bind(Dependency.class, DependencyWithInjectConstructor.class);
+			config.bind(String.class, "indirect dependency");
+
+
+			Component instance = config.getContext().get(Component.class).get();
+			assertNotNull(instance);
+			Dependency dependency = ((ComponentWithInjectConstructor) instance).getDependency();
+			assertNotNull(dependency);
+			assertEquals("indirect dependency", ((DependencyWithInjectConstructor) dependency).getDependency());
+		}
+
+
 
 		@Test
 		public void should_return_empty_if_component_not_defined() {
@@ -41,40 +77,6 @@ public class ContainerTest {
 
 		@Nested
 		public class DependencyCheck {
-			@Test
-			public void should_bind_type_to_a_class_with_default_constructor() {
-				config.bind(Component.class, ComponentWithDefaultConstructor.class);
-				Component instance = config.getContext().get(Component.class).get();
-				assertNotNull(instance);
-				assertTrue(instance instanceof ComponentWithDefaultConstructor);
-			}
-
-
-			@Test
-			public void should_bind_type_to_a_class_with_inject_constructor() {
-				config.bind(Component.class, ComponentWithInjectConstructor.class);
-				Dependency dependency = new Dependency() {};
-				config.bind(Dependency.class, dependency);
-				Component instance = config.getContext().get(Component.class).get();
-				assertNotNull(instance);
-				Dependency dependency1 = ((ComponentWithInjectConstructor) instance).getDependency();
-				assertNotNull(dependency1);
-				assertSame(dependency, dependency1);
-			}
-
-			@Test
-			public void should_bind_type_to_a_class_with_transitive_dependency() {
-				config.bind(Component.class, ComponentWithInjectConstructor.class);
-				config.bind(Dependency.class, DependencyWithInjectConstructor.class);
-				config.bind(String.class, "indirect dependency");
-
-
-				Component instance = config.getContext().get(Component.class).get();
-				assertNotNull(instance);
-				Dependency dependency = ((ComponentWithInjectConstructor) instance).getDependency();
-				assertNotNull(dependency);
-				assertEquals("indirect dependency", ((DependencyWithInjectConstructor) dependency).getDependency());
-			}
 
 		}
 
