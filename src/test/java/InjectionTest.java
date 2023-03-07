@@ -258,3 +258,43 @@ public class InjectionTest {
 	}
 }
 
+interface  Components{
+
+}
+class ComponentWithDefaultConstructor implements Components {
+	public ComponentWithDefaultConstructor() {
+
+	}
+
+}
+
+class ComponentWithInjectConstructor implements Components {
+	private Dependency dependency;
+
+	@Inject
+	public ComponentWithInjectConstructor(Dependency dependency) {
+		this.dependency = dependency;
+	}
+
+	public Dependency getDependency() {
+		return dependency;
+	}
+
+}
+
+
+class ComponentWithMultiInjectConstructor implements Components {
+
+	@Inject
+	public ComponentWithMultiInjectConstructor(String name, Double value) {
+	}
+
+	@Inject
+	public ComponentWithMultiInjectConstructor(String name) {
+	}
+}
+
+class ComponentWithNoInjectNorDefaultConstructor implements Components {
+	public ComponentWithNoInjectNorDefaultConstructor(String name) {
+	}
+}
