@@ -5,13 +5,8 @@ import java.util.Set;
 public class CyclicDependencyException extends RuntimeException {
 	Set<Class<?>> dependencies = new HashSet<>();
 
-	public CyclicDependencyException(Class<?> component) {
-		dependencies.add(component);
-	}
-
-	public CyclicDependencyException(Class<?> type, Set<Class<?>> dependency) {
-		dependencies.add(type);
-		dependencies.addAll(dependency);
+	public CyclicDependencyException(List<Class<?>> visiting) {
+		dependencies.addAll(visiting);
 	}
 
 
