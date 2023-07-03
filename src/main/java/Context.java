@@ -5,7 +5,6 @@ import java.lang.reflect.Constructor;
 import java.lang.reflect.InvocationTargetException;
 import java.util.*;
 import java.util.stream.Collectors;
-import java.util.stream.Stream;
 
 public class Context {
 
@@ -17,16 +16,38 @@ public class Context {
 	}
 
 
-	public <T, I extends T> void bind(Class<T> type, Class<I> implementation) {
-		Constructor<I> injectConstructor = getInjectConstructor(implementation);
-		providers.put(type, (Provider<T>) () -> {
+	class ConstructorInjectionProvider<T> implements Provider<T> {
+		private Class<?> type;
+		private Constructor<T> injectConstructor;
+		private boolean constructing = false;
+
+
+		public ConstructorInjectionProvider(Class<?> type, Constructor<T> injectConstructor) {
+			this.type = type;
+			this.injectConstructor = injectConstructor;
+		}
+
+		@Override
+		public T get() {
+			if (constructing) throw new CyclicDependencyException(type);
 			try {
-				Object[] dependencies = Arrays.stream(injectConstructor.getParameters()).map(p -> get(p.getType()).orElseThrow(DependencyNotFoundException::new)).toArray(Object[]::new);
+				constructing = true;
+				Object[] dependencies = Arrays.stream(injectConstructor.getParameters()).map(p -> Context.this.get(p.getType()).orElseThrow(() -> new DependencyNotFoundException(type, p.getType()))).toArray(Object[]::new);
 				return (T) injectConstructor.newInstance(dependencies);
 			} catch (InvocationTargetException | InstantiationException | IllegalAccessException e) {
 				throw new RuntimeException(e);
+			} catch (CyclicDependencyException e) {
+				throw new CyclicDependencyException(type,e.dependencies);
+			} finally {
+				constructing = true;
 			}
-		});
+		}
+	}
+
+
+	public <T, I extends T> void bind(Class<T> type, Class<I> implementation) {
+		Constructor<I> injectConstructor = getInjectConstructor(implementation);
+		providers.put(type, new ConstructorInjectionProvider<I>(type, injectConstructor));
 	}
 
 	private static <T> Constructor<T> getInjectConstructor(Class<T> implementation) {
