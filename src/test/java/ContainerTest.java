@@ -176,7 +176,6 @@ class ComponentWithMultiInjectConstructor implements Component {
 	}
 
 	@Inject
-
 	public ComponentWithMultiInjectConstructor(Double value) {
 	}
 }

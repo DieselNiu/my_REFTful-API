@@ -8,7 +8,7 @@ import java.util.stream.Collectors;
 
 public class Context {
 
-	private Map<Class<?>, Provider<?>> providers = new HashMap<>();
+	private final Map<Class<?>, Provider<?>> providers = new HashMap<>();
 
 	public <T> void bind(Class<T> type, T component) {
 		providers.put(type, (Provider<T>) () -> component);
@@ -17,8 +17,8 @@ public class Context {
 
 
 	class ConstructorInjectionProvider<T> implements Provider<T> {
-		private Class<?> type;
-		private Constructor<T> injectConstructor;
+		private final Class<?> type;
+		private final Constructor<T> injectConstructor;
 		private boolean constructing = false;
 
 
@@ -33,7 +33,7 @@ public class Context {
 			try {
 				constructing = true;
 				Object[] dependencies = Arrays.stream(injectConstructor.getParameters()).map(p -> Context.this.get(p.getType()).orElseThrow(() -> new DependencyNotFoundException(type, p.getType()))).toArray(Object[]::new);
-				return (T) injectConstructor.newInstance(dependencies);
+				return  injectConstructor.newInstance(dependencies);
 			} catch (InvocationTargetException | InstantiationException | IllegalAccessException e) {
 				throw new RuntimeException(e);
 			} catch (CyclicDependencyException e) {
@@ -47,11 +47,11 @@ public class Context {
 
 	public <T, I extends T> void bind(Class<T> type, Class<I> implementation) {
 		Constructor<I> injectConstructor = getInjectConstructor(implementation);
-		providers.put(type, new ConstructorInjectionProvider<I>(type, injectConstructor));
+		providers.put(type, new ConstructorInjectionProvider<>(type, injectConstructor));
 	}
 
 	private static <T> Constructor<T> getInjectConstructor(Class<T> implementation) {
-		List<Constructor<?>> injectConstructors = Arrays.stream(implementation.getConstructors()).filter(c -> c.isAnnotationPresent(Inject.class)).collect(Collectors.toList());
+		List<Constructor<?>> injectConstructors = Arrays.stream(implementation.getConstructors()).filter(c -> c.isAnnotationPresent(Inject.class)).toList();
 		if (injectConstructors.size() > 1) throw new IllegalComponentException();
 		return (Constructor<T>) injectConstructors.stream().findFirst().orElseGet(() -> {
 			try {
