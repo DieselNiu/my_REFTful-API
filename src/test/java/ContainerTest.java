@@ -1,5 +1,6 @@
 import jakarta.inject.Inject;
 import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 
@@ -8,6 +9,9 @@ import java.util.Optional;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.*;
+import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.when;
 
 public class ContainerTest {
 	ContextConfig contextConfig;
@@ -101,12 +105,66 @@ public class ContainerTest {
 				assertTrue(components.contains(Component.class));
 				assertTrue(components.contains(Dependency.class));
 			}
-
-
 		}
 
 		@Nested
 		class FieldInjection {
+			static class ComponentWithFieldInjection {
+				@Inject
+				Dependency dependency;
+			}
+
+			@Test
+			public void should_inject_dependency_via_field() {
+				Dependency dependency = new Dependency() {};
+				contextConfig.bind(ComponentWithFieldInjection.class, ComponentWithFieldInjection.class);
+				contextConfig.bind(Dependency.class, dependency);
+				ComponentWithFieldInjection fieldInjection = contextConfig.getContext().get(ComponentWithFieldInjection.class).get();
+				assertSame(dependency, fieldInjection.dependency);
+			}
+
+			@Test
+			public void should_include_dependency_in_dependencies() {
+				ConstructorInjectionProvider<ComponentWithFieldInjection> injectionProvider = new ConstructorInjectionProvider<>(ComponentWithFieldInjection.class);
+				assertArrayEquals(new Class[]{Dependency.class}, injectionProvider.getDependency().toArray());
+			}
+
+			@Test
+			@Disabled
+			public void should_create_component_with_injection_field() {
+				Context context = mock(Context.class);
+				Dependency dependency = new Dependency() {};
+				when(context.get(eq(Dependency.class))).thenReturn(Optional.of(dependency));
+				ConstructorInjectionProvider<ComponentWithFieldInjection> injectionProvider = new ConstructorInjectionProvider<>(ComponentWithFieldInjection.class);
+				ComponentWithFieldInjection fieldInjection = injectionProvider.get(context);
+				assertSame(dependency, fieldInjection.dependency);
+			}
+
+
+			@Test
+			@Disabled
+			public void should_throw_exception_when_field_dependency_missing() {
+				contextConfig.bind(ComponentWithFieldInjection.class, ComponentWithFieldInjection.class);
+				assertThrows(DependencyNotFoundException.class, () -> contextConfig.getContext());
+			}
+
+			static class SubClassWithFieldInjection extends SuperClassWithFieldInjection {
+
+			}
+
+			static class SuperClassWithFieldInjection {
+				@Inject
+				Dependency dependency;
+			}
+
+			@Test
+			public void should_inject_dependency_via_super_class_inject_field() {
+				Dependency dependency = new Dependency() {};
+				contextConfig.bind(SubClassWithFieldInjection.class, SubClassWithFieldInjection.class);
+				contextConfig.bind(Dependency.class, dependency);
+				SubClassWithFieldInjection fieldInjection = contextConfig.getContext().get(SubClassWithFieldInjection.class).get();
+				assertSame(dependency, fieldInjection.dependency);
+			}
 
 		}
 
