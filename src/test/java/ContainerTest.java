@@ -4,6 +4,7 @@ import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 
 import java.util.List;
+import java.util.Optional;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.*;
@@ -23,6 +24,12 @@ public class ContainerTest {
 			Component component = new Component() {};
 			contextConfig.bind(Component.class, component);
 			assertSame(component, contextConfig.getContext().get(Component.class).get());
+		}
+
+		@Test
+		public void should_return_empty_if_component_is_not_existed() {
+			Optional<Component> component = contextConfig.getContext().get(Component.class);
+			assertTrue(component.isEmpty());
 		}
 
 
