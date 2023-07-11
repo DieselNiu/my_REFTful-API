@@ -1,7 +1,11 @@
 import java.util.List;
 
+import static java.util.List.of;
+
 interface ComponentProvider<T> {
 	T get(Context context);
 
-	List<Class<?>> getDependency();
+	default List<Class<?>> getDependency(){
+		return of();
+	};
 }

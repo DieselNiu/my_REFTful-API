@@ -1,26 +1,14 @@
 import java.util.*;
 
-import static java.util.Arrays.asList;
-
 public class ContextConfig {
 	private final Map<Class<?>, ComponentProvider<?>> componentProviders = new HashMap<>();
 
 	public <T> void bind(Class<T> type, T component) {
-		componentProviders.put(type, new ComponentProvider<T>() {
-			@Override
-			public T get(Context context) {
-				return component;
-			}
-
-			@Override
-			public List<Class<?>> getDependency() {
-				return asList();
-			}
-		});
+		componentProviders.put(type, (ComponentProvider<T>) context -> component);
 	}
 
 	public <T, I extends T> void bind(Class<T> type, Class<I> implementation) {
-		componentProviders.put(type, new ConstructorInjectionProvider<>(implementation));
+		componentProviders.put(type, new InjectionProvider<>(implementation));
 	}
 
 	public Context getContext() {
