@@ -3,6 +3,8 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 
+import java.util.Optional;
+
 import static org.junit.jupiter.api.Assertions.*;
 
 public class ContainerTest {
@@ -22,7 +24,13 @@ public class ContainerTest {
 		public void should_bind_to_a_specific_instance() {
 			Component instance = new Component() {};
 			context.bind(Component.class, instance);
-			assertSame(instance, context.get(Component.class));
+			assertSame(instance, context.get(Component.class).get());
+		}
+
+		@Test
+		public void should_return_empty_if_component_not_exist() {
+			Optional<Component> optionalComponent = context.get(Component.class);
+			assertTrue(optionalComponent.isEmpty());
 		}
 
 
@@ -31,7 +39,7 @@ public class ContainerTest {
 			@Test
 			public void should_bind_a_class_with_default_constructor() {
 				context.bind(Component.class, ComponentWithDefaultConstructor.class);
-				Component component = context.get(Component.class);
+				Component component = context.get(Component.class).get();
 				assertNotNull(component);
 				assertTrue(component instanceof ComponentWithDefaultConstructor);
 			}
@@ -41,7 +49,7 @@ public class ContainerTest {
 				Dependency dependency = new Dependency() {};
 				context.bind(Component.class, ComponentWithInjectConstructor.class);
 				context.bind(Dependency.class, dependency);
-				Component component = context.get(Component.class);
+				Component component = context.get(Component.class).get();
 				assertNotNull(component);
 				assertSame(dependency, ((ComponentWithInjectConstructor) component).getDependency());
 			}
@@ -51,7 +59,7 @@ public class ContainerTest {
 				context.bind(Component.class, ComponentWithInjectConstructor.class);
 				context.bind(Dependency.class, DependencyWithInjectConstructor.class);
 				context.bind(String.class, "indirect dependency");
-				Component component = context.get(Component.class);
+				Component component = context.get(Component.class).get();
 				assertNotNull(component);
 				Dependency dependency = ((ComponentWithInjectConstructor) component).getDependency();
 				assertEquals("indirect dependency", ((DependencyWithInjectConstructor) dependency).getDependency());
@@ -63,9 +71,16 @@ public class ContainerTest {
 			}
 
 			@Test
-			public void should_throw_exception_if_no_default_nor_inject_constructor_provided(){
+			public void should_throw_exception_if_no_default_nor_inject_constructor_provided() {
 				assertThrows(IllegalComponentException.class, () -> context.bind(Component.class, ComponentWithNoDefaultNorInjectConstructor.class));
 			}
+
+			@Test
+			public void should_throw_exception_if_dependency_not_found() {
+				context.bind(Component.class, ComponentWithInjectConstructor.class);
+				assertThrows(DependencyNotFoundException.class, () -> context.get(Dependency.class).orElseThrow(DependencyNotFoundException::new));
+			}
+
 
 		}
 
@@ -145,6 +160,6 @@ class ComponentWithMultiInjectConstructors implements Component {
 
 class ComponentWithNoDefaultNorInjectConstructor implements Component {
 
-	public ComponentWithNoDefaultNorInjectConstructor(String value ,Double d) {
+	public ComponentWithNoDefaultNorInjectConstructor(String value, Double d) {
 	}
 }
