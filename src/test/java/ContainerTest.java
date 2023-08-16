@@ -4,6 +4,7 @@ import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 
 import java.util.Optional;
+import java.util.Set;
 
 import static org.junit.jupiter.api.Assertions.*;
 
@@ -78,7 +79,26 @@ public class ContainerTest {
 			@Test
 			public void should_throw_exception_if_dependency_not_found() {
 				context.bind(Component.class, ComponentWithInjectConstructor.class);
-				assertThrows(DependencyNotFoundException.class, () -> context.get(Dependency.class).orElseThrow(DependencyNotFoundException::new));
+				DependencyNotFoundException dependencyNotFoundException = assertThrows(DependencyNotFoundException.class, () -> context.get(Component.class));
+				assertEquals(Dependency.class, dependencyNotFoundException.getDependency());
+				assertEquals(Component.class, dependencyNotFoundException.getComponent());
+			}
+
+
+			@Test
+			public void should_throw_exception_when_cyclic_dependency_occur() {
+				context.bind(Component.class, ComponentWithInjectConstructor.class);
+				context.bind(Dependency.class, DependencyDependentOnComponent.class);
+				CyclicDependencyException cyclicDependencyException = assertThrows(CyclicDependencyException.class, () -> context.get(Component.class));
+				Set<Class<?>> components = cyclicDependencyException.getComponents();
+				assertTrue(components.contains(Component.class));
+				assertTrue(components.contains(Dependency.class));
+			}
+
+
+			@Test
+			public void should_throw_exception_if_transitive_cyclic_dependency_occur() {
+
 			}
 
 
@@ -161,5 +181,18 @@ class ComponentWithMultiInjectConstructors implements Component {
 class ComponentWithNoDefaultNorInjectConstructor implements Component {
 
 	public ComponentWithNoDefaultNorInjectConstructor(String value, Double d) {
+	}
+}
+
+class DependencyDependentOnComponent implements Dependency {
+	private final Component component;
+
+	@Inject
+	public DependencyDependentOnComponent(Component component) {
+		this.component = component;
+	}
+
+	public Component getComponent() {
+		return component;
 	}
 }
