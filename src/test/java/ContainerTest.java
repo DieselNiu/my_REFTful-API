@@ -81,7 +81,7 @@ public class ContainerTest {
 			@Test
 			public void should_throw_exception_if_dependency_not_found() {
 				contextconfig.bind(Component.class, ComponentWithInjectConstructor.class);
-				DependencyNotFoundException dependencyNotFoundException = assertThrows(DependencyNotFoundException.class, () -> contextconfig.getContext().get(Component.class));
+				DependencyNotFoundException dependencyNotFoundException = assertThrows(DependencyNotFoundException.class, () -> contextconfig.getContext());
 				assertEquals(Dependency.class, dependencyNotFoundException.getDependency());
 				assertEquals(Component.class, dependencyNotFoundException.getComponent());
 			}
@@ -91,7 +91,7 @@ public class ContainerTest {
 			public void should_throw_exception_when_cyclic_dependency_occur() {
 				contextconfig.bind(Component.class, ComponentWithInjectConstructor.class);
 				contextconfig.bind(Dependency.class, DependencyDependentOnComponent.class);
-				CyclicDependencyException cyclicDependencyException = assertThrows(CyclicDependencyException.class, () -> contextconfig.getContext().get(Component.class));
+				CyclicDependencyException cyclicDependencyException = assertThrows(CyclicDependencyException.class, () -> contextconfig.getContext());
 				Set<Class<?>> components = cyclicDependencyException.getComponents();
 				assertTrue(components.contains(Component.class));
 				assertTrue(components.contains(Dependency.class));
