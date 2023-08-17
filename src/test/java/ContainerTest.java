@@ -7,6 +7,9 @@ import java.util.Optional;
 import java.util.Set;
 
 import static org.junit.jupiter.api.Assertions.*;
+import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.when;
 
 public class ContainerTest {
 
@@ -108,6 +111,70 @@ public class ContainerTest {
 
 		@Nested
 		class FieldInjection {
+			static class ComponentWithFieldInjection {
+				@Inject
+				Dependency dependency;
+			}
+
+			@Test
+			public void should_inject_dependency_via_field() {
+				Dependency dependency = new Dependency() {};
+				contextconfig.bind(ComponentWithFieldInjection.class, ComponentWithFieldInjection.class);
+				contextconfig.bind(Dependency.class, dependency);
+				ComponentWithFieldInjection injection = contextconfig.getContext().get(ComponentWithFieldInjection.class).get();
+				assertSame(dependency, injection.dependency);
+			}
+
+			@Test
+			public void should_create_component_with_inject_field() {
+				Context context = mock(Context.class);
+				Dependency dependency = mock(Dependency.class);
+				when(context.get(eq(Dependency.class))).thenReturn(Optional.of(dependency));
+				ConstructorInjectionProvider<ComponentWithFieldInjection> provider = new ConstructorInjectionProvider<>(ComponentWithFieldInjection.class);
+				assertSame(dependency, provider.get(context).dependency);
+			}
+
+			@Test
+			public void should_throw_exception_when_field_dependency_missing() {
+				contextconfig.bind(ComponentWithFieldInjection.class, ComponentWithFieldInjection.class);
+				assertThrows(DependencyNotFoundException.class, () -> contextconfig.getContext());
+			}
+
+			@Test
+			public void should_include_dependency_in_dependencies() {
+				ConstructorInjectionProvider<ComponentWithFieldInjection> provider = new ConstructorInjectionProvider<>(ComponentWithFieldInjection.class);
+				Class<?>[] classes = provider.getDependency().toArray(Class<?>[]::new);
+				assertArrayEquals(new Class<?>[]{Dependency.class}, classes);
+			}
+
+			static class DependencyWithInjectField implements Dependency {
+				@Inject
+				Component component;
+			}
+
+
+			@Test
+			public void should_throw_exception_when_field_has_cyclic_dependencies() {
+				ConstructorInjectionProvider<DependencyWithInjectField> provider = new ConstructorInjectionProvider<>(DependencyWithInjectField.class);
+				Class<?>[] classes = provider.getDependency().toArray(Class<?>[]::new);
+				assertArrayEquals(new Class<?>[]{Component.class}, classes);
+			}
+
+
+			static class SuperClassWithFieldInjection extends ComponentWithFieldInjection {
+
+			}
+
+			@Test
+			public void should_inject_dependency_via_super_class_inject_field() {
+				Dependency dependency = new Dependency() {};
+				contextconfig.bind(SuperClassWithFieldInjection.class, SuperClassWithFieldInjection.class);
+				contextconfig.bind(Dependency.class, dependency);
+
+				SuperClassWithFieldInjection fieldInjection = contextconfig.getContext().get(SuperClassWithFieldInjection.class).get();
+				assertSame(dependency, fieldInjection.dependency);
+
+			}
 
 		}
 

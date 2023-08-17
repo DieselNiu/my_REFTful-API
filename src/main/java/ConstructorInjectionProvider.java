@@ -1,18 +1,33 @@
 import jakarta.inject.Inject;
 
 import java.lang.reflect.Constructor;
+import java.lang.reflect.Field;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Parameter;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 import static java.util.Arrays.stream;
 
 class ConstructorInjectionProvider<T> implements ComponentProvider<T> {
 	private final Constructor<T> injectConstructors;
+	private final List<Field> injectFields;
 
 	public ConstructorInjectionProvider(Class<T> implementation) {
 		this.injectConstructors = getInjectConstructors(implementation);
+		this.injectFields = getInjectFields(implementation);
+	}
+
+	private static <T> List<Field> getInjectFields(Class<T> implementation) {
+		List<Field> injectFields = new ArrayList<>();
+		Class<?> current = implementation;
+		while (current != Object.class) {
+			injectFields.addAll(stream(current.getDeclaredFields()).filter(f -> f.isAnnotationPresent(Inject.class)).toList());
+			current = current.getSuperclass();
+		}
+		return injectFields;
 	}
 
 	private Constructor<T> getInjectConstructors(Class<T> implementation) {
@@ -20,7 +35,7 @@ class ConstructorInjectionProvider<T> implements ComponentProvider<T> {
 		if (constructors.size() > 1) throw new IllegalComponentException();
 		return (Constructor<T>) constructors.stream().findFirst().orElseGet(() -> {
 			try {
-				return implementation.getConstructor();
+				return implementation.getDeclaredConstructor();
 			} catch (NoSuchMethodException e) {
 				throw new IllegalComponentException();
 			}
@@ -32,7 +47,11 @@ class ConstructorInjectionProvider<T> implements ComponentProvider<T> {
 	public T get(Context context) {
 		try {
 			Object[] dependencies = stream(injectConstructors.getParameters()).map(p -> context.get(p.getType()).get()).toArray(Object[]::new);
-			return injectConstructors.newInstance(dependencies);
+			T instance = injectConstructors.newInstance(dependencies);
+			for (Field field : injectFields) {
+				field.set(instance, context.get(field.getType()).get());
+			}
+			return instance;
 		} catch (InstantiationException | IllegalAccessException | InvocationTargetException e) {
 			throw new RuntimeException(e);
 		}
@@ -40,6 +59,6 @@ class ConstructorInjectionProvider<T> implements ComponentProvider<T> {
 
 	@Override
 	public List<Class<?>> getDependency() {
-		return stream(injectConstructors.getParameters()).map(Parameter::getType).collect(Collectors.toList());
+		return Stream.concat(injectFields.stream().map(Field::getType), stream(injectConstructors.getParameters()).map(Parameter::getType)).toList();
 	}
 }
