@@ -3,6 +3,7 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 
+import java.util.List;
 import java.util.Optional;
 import java.util.Set;
 
@@ -180,7 +181,107 @@ public class ContainerTest {
 
 		@Nested
 		class MethodInjection {
+			static class InjectMethodWithNoDependency {
+				boolean called = false;
 
+
+				@Inject
+				void install() {
+					called = true;
+				}
+
+			}
+
+			@Test
+			public void should_call_inject_method_even_if_no_dependency() {
+				contextconfig.bind(InjectMethodWithNoDependency.class, InjectMethodWithNoDependency.class);
+				InjectMethodWithNoDependency withNoDependency = contextconfig.getContext().get(InjectMethodWithNoDependency.class).get();
+				assertTrue(withNoDependency.called);
+			}
+
+			static class InjectMethodWithDependency {
+				Dependency dependency;
+
+				@Inject
+				void install(Dependency dependency) {
+					this.dependency = dependency;
+				}
+			}
+
+			@Test
+			public void should_inject_dependency_with_inject_method() {
+				Dependency dependency = new Dependency() {};
+				contextconfig.bind(Dependency.class, dependency);
+				contextconfig.bind(InjectMethodWithDependency.class, InjectMethodWithDependency.class);
+				InjectMethodWithDependency methodWithDependency = contextconfig.getContext().get(InjectMethodWithDependency.class).get();
+				assertSame(dependency, methodWithDependency.dependency);
+			}
+
+			@Test
+			public void should_include_dependency_in_dependencies() {
+				ConstructorInjectionProvider<InjectMethodWithDependency> injectionProvider = new ConstructorInjectionProvider<>(InjectMethodWithDependency.class);
+				List<Class<?>> dependencies = injectionProvider.getDependency();
+				assertTrue(dependencies.contains(Dependency.class));
+			}
+
+			static class SuperClassWithInjectMethod {
+				int superCalled = 0;
+
+				@Inject
+				void install() {
+					superCalled++;
+				}
+			}
+
+
+			static class SubClassWithInjectMethod extends SuperClassWithInjectMethod {
+				int subCalled = 0;
+
+				@Inject
+				void installAnother() {
+					subCalled = 1 + superCalled;
+				}
+			}
+
+
+			@Test
+			public void should_inject_dependency_via_inject_method_from_superclass() {
+				contextconfig.bind(SubClassWithInjectMethod.class, SubClassWithInjectMethod.class);
+				SubClassWithInjectMethod subClassWithInjectMethod = contextconfig.getContext().get(SubClassWithInjectMethod.class).get();
+				assertEquals(1, subClassWithInjectMethod.superCalled);
+				assertEquals(2, subClassWithInjectMethod.subCalled);
+			}
+
+			static class SubClassOverrideSuperClass extends SuperClassWithInjectMethod {
+
+				@Inject
+				void install() {
+					super.install();
+				}
+			}
+
+
+			@Test
+			public void should_only_call_once_if_subclass_override_superclass() {
+				contextconfig.bind(SubClassOverrideSuperClass.class, SubClassOverrideSuperClass.class);
+				SubClassOverrideSuperClass overrideSuperClass = contextconfig.getContext().get(SubClassOverrideSuperClass.class).get();
+				assertEquals(1, overrideSuperClass.superCalled);
+			}
+
+
+			static class SubclassOverrideSuperclassWithNoInject extends SuperClassWithInjectMethod {
+
+				void install() {
+					super.install();
+				}
+			}
+
+			@Test
+			public void should_not_call_inject_method_if_override_with_no_inject() {
+				contextconfig.bind(SubclassOverrideSuperclassWithNoInject.class, SubclassOverrideSuperclassWithNoInject.class);
+				SubclassOverrideSuperclassWithNoInject superclassWithNoInject = contextconfig.getContext().get(SubclassOverrideSuperclassWithNoInject.class).get();
+				assertEquals(0, superclassWithNoInject.superCalled);
+			}
 		}
 
 	}
