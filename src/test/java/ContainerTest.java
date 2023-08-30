@@ -101,10 +101,20 @@ public class ContainerTest {
 				assertTrue(components.contains(Dependency.class));
 			}
 
+			abstract class AbstractComponent implements Component {
+				@Inject
+				public AbstractComponent() {
+				}
+			}
 
 			@Test
-			public void should_throw_exception_if_transitive_cyclic_dependency_occur() {
+			public void should_throw_exception_if_component_is_abstract() {
+				assertThrows(IllegalComponentException.class, () -> new ConstructorInjectionProvider<>(AbstractComponent.class));
+			}
 
+			@Test
+			public void should_throw_exception_if_component_is_interface() {
+				assertThrows(IllegalComponentException.class, () -> new ConstructorInjectionProvider<>(Component.class));
 			}
 
 
@@ -175,6 +185,15 @@ public class ContainerTest {
 				SuperClassWithFieldInjection fieldInjection = contextconfig.getContext().get(SuperClassWithFieldInjection.class).get();
 				assertSame(dependency, fieldInjection.dependency);
 
+			}
+
+			static class FinalInjectField {
+				@Inject final Dependency dependency = null;
+			}
+
+			@Test
+			public void should_throw_exception_if_inject_field_is_final() {
+				assertThrows(IllegalComponentException.class, () -> new ConstructorInjectionProvider<>(FinalInjectField.class));
 			}
 
 		}
@@ -282,6 +301,19 @@ public class ContainerTest {
 				SubclassOverrideSuperclassWithNoInject superclassWithNoInject = contextconfig.getContext().get(SubclassOverrideSuperclassWithNoInject.class).get();
 				assertEquals(0, superclassWithNoInject.superCalled);
 			}
+		}
+
+
+		static class InjectMethodWithTypeParameter {
+			@Inject
+			<T> void install() {
+
+			}
+		}
+
+		@Test
+		public void should_throw_exception_if_method_has_type_parameter() {
+			assertThrows(IllegalComponentException.class, () -> new ConstructorInjectionProvider<>(InjectMethodWithTypeParameter.class));
 		}
 
 	}

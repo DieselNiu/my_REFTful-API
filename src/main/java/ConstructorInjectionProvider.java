@@ -16,9 +16,12 @@ class ConstructorInjectionProvider<T> implements ComponentProvider<T> {
 	private final List<Method> injectMethods;
 
 	public ConstructorInjectionProvider(Class<T> implementation) {
+		if (Modifier.isAbstract(implementation.getModifiers())) throw new IllegalComponentException();
 		this.injectConstructors = getInjectConstructors(implementation);
 		this.injectFields = getInjectFields(implementation);
 		this.injectMethods = getInjectMethods(implementation);
+		if (injectFields.stream().anyMatch(field -> Modifier.isFinal(field.getModifiers()))) throw new IllegalComponentException();
+		if (injectMethods.stream().anyMatch(method -> method.getTypeParameters().length > 0)) throw new IllegalComponentException();
 	}
 
 	private static <T> List<Method> getInjectMethods(Class<T> implementation) {
@@ -27,7 +30,7 @@ class ConstructorInjectionProvider<T> implements ComponentProvider<T> {
 		while (current != Object.class) {
 			injectMethods.addAll(stream(current.getDeclaredMethods()).filter(m -> m.isAnnotationPresent(Inject.class))
 				.filter(m -> injectMethods.stream().noneMatch(o -> o.getName().equals(m.getName()) && Arrays.equals(o.getParameterTypes(), m.getParameterTypes())))
-					.filter(m-> stream(implementation.getDeclaredMethods()).filter(m1->!m1.isAnnotationPresent(Inject.class)).noneMatch(o -> o.getName().equals(m.getName()) && Arrays.equals(o.getParameterTypes(), m.getParameterTypes())))
+				.filter(m -> stream(implementation.getDeclaredMethods()).filter(m1 -> !m1.isAnnotationPresent(Inject.class)).noneMatch(o -> o.getName().equals(m.getName()) && Arrays.equals(o.getParameterTypes(), m.getParameterTypes())))
 				.toList());
 			current = current.getSuperclass();
 		}
