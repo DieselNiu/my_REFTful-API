@@ -1,3 +1,6 @@
+import jakarta.inject.Provider;
+
+import java.lang.reflect.ParameterizedType;
 import java.util.*;
 
 import static java.util.List.of;
@@ -23,15 +26,25 @@ public class ContextConfig {
 			public <T> Optional<T> get(Class<T> type) {
 				return Optional.ofNullable(providers.get(type)).map(x -> (T) x.get(this));
 			}
+
+			@Override
+			public Optional get(ParameterizedType type) {
+				if(type.getRawType() != Provider.class) return Optional.empty();
+				Class<?> componentType = (Class<?>) type.getActualTypeArguments()[0];
+				return  Optional.ofNullable(providers.get(componentType)).map(
+					provider -> (Provider<Object>) () -> provider.get(this));
+			}
 		};
 	}
 
 	interface ComponentProvider<T> {
 		T get(Context context);
 
-		default List<Class<?>> getDependencies(){
+		default List<Class<?>> getDependencies() {
 			return of();
-		};
+		}
+
+		;
 	}
 
 	private void checkDependencies(Class<?> component, Stack<Class<?>> visiting) {
