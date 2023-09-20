@@ -151,7 +151,11 @@ public class ContextTest {
 		public static Stream<Arguments> should_throw_exception_if_dependency_not_found() {
 			return Stream.of(Arguments.of(Named.of("Inject Constructor", DependencyCheck.MissingDependencyConstructor.class)),
 				Arguments.of(Named.of("Inject Field", DependencyCheck.MissingDependencyField.class)),
-				Arguments.of(Named.of("Inject Method", DependencyCheck.MissingDependencyMethod.class)));
+				Arguments.of(Named.of("Inject Method", DependencyCheck.MissingDependencyMethod.class)),
+				Arguments.of(Named.of("Provider in Inject Constructor", MissingDependencyProviderConstructor.class)),
+				Arguments.of(Named.of("Provider in Inject Field", MissingDependencyProviderField.class)),
+				Arguments.of(Named.of("Provider in Inject Method", MissingDependencyProviderMethod.class)));
+
 		}
 
 
@@ -172,6 +176,27 @@ public class ContextTest {
 
 			}
 		}
+
+		static class MissingDependencyProviderConstructor implements TestComponent {
+			@Inject
+			public MissingDependencyProviderConstructor(Provider<Dependency> dependency) {
+
+			}
+
+		}
+
+		static class MissingDependencyProviderField implements TestComponent {
+			@Inject Provider<Dependency> dependency;
+		}
+
+
+		static class MissingDependencyProviderMethod implements TestComponent {
+			@Inject
+			void install(Provider<Dependency> dependency) {
+			}
+
+		}
+
 
 		@ParameterizedTest(name = "cyclic dependency between {0} and {1}")
 		@MethodSource
@@ -315,6 +340,23 @@ public class ContextTest {
 			void install(Component component) {
 
 			}
+		}
+
+
+		static class CyclicDependencyProviderConstructor implements Dependency {
+			@Inject
+			public CyclicDependencyProviderConstructor(Provider<TestComponent> component) {
+
+			}
+		}
+
+		@Test
+		public void should_not_throw_exception_if_cyclic_dependency_via_provider() {
+			config.bind(TestComponent.class, CyclicComponentInjectConstructor.class);
+			config.bind(Dependency.class, CyclicDependencyProviderConstructor.class);
+			Context context = config.getContext();
+			assertTrue(context.get(TestComponent.class).isPresent());
+
 		}
 	}
 
