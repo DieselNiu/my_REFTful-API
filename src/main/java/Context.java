@@ -1,9 +1,6 @@
-import java.lang.reflect.ParameterizedType;
-import java.util.Map;
+import java.lang.reflect.Type;
 import java.util.Optional;
 
 public interface Context {
-	<T> Optional<T> get(Class<T> type);
-
-	Optional get(ParameterizedType type);
+	Optional get(Type type);
 }
