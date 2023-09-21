@@ -44,10 +44,12 @@ class InjectionProvider<T> implements ContextConfig.ComponentProvider<T> {
 
 
 	@Override
-	public List<Type> getDependency() {
+	public List<Context.Ref> getDependencies() {
 		return concat(injectMethods.stream().flatMap(m -> stream(m.getParameters()).map(Parameter::getParameterizedType)),
-			concat(stream(constructor.getParameters()).map(Parameter::getParameterizedType), injectFields.stream().map(Field::getGenericType))).toList();
+			concat(stream(constructor.getParameters()).map(Parameter::getParameterizedType),
+				injectFields.stream().map(Field::getGenericType))).toList().stream().map(Context.Ref::of).toList();
 	}
+
 
 	private static <T> List<Method> getInjectMethods(Class<T> implementation) {
 		List<Method> injectMethods = traverse(implementation, ((methods, current) -> injectable(current.getDeclaredMethods())
@@ -112,7 +114,7 @@ class InjectionProvider<T> implements ContextConfig.ComponentProvider<T> {
 	}
 
 	private static Object toDependency(Context context, Type type) {
-		return context.get(type).get();
+		return context.get(Context.Ref.of(type)).get();
 	}
 
 
