@@ -1,3 +1,4 @@
+import java.lang.annotation.Annotation;
 import java.lang.reflect.ParameterizedType;
 import java.lang.reflect.Type;
 import java.util.Objects;
@@ -15,14 +16,22 @@ public interface Context {
 
 
 		public static Ref of(Type type) {
-			return new Ref(type);
+			return new Ref(type, null);
 		}
+
+		public static <T> Ref<T> of(Class<T> component, Annotation qualifier) {
+			return new Ref<>(component,qualifier);
+		}
+
+
 
 		private Type container;
 		private Class<?> component;
+		private Annotation qualifier;
 
-		Ref(Type type) {
+		Ref(Type type, Annotation qualifier) {
 			init(type);
+			this.qualifier = qualifier;
 		}
 
 		Ref(Class<T> component) {
@@ -42,6 +51,10 @@ public interface Context {
 			} else {
 				this.component = (Class<?>) type;
 			}
+		}
+
+		public Annotation getQualifier() {
+			return qualifier;
 		}
 
 		public Type getContainer() {

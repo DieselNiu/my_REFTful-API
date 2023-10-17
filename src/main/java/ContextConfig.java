@@ -1,20 +1,43 @@
 import jakarta.inject.Provider;
+import jakarta.inject.Qualifier;
 
+import java.lang.annotation.Annotation;
 import java.util.*;
-
-import static java.util.List.of;
 
 public class ContextConfig {
 
 	private Map<Class<?>, ComponentProvider<?>> providers = new HashMap<>();
+	private Map<Component, ComponentProvider<?>> components = new HashMap<>();
 
 	public <T> void bind(Class<T> type, T instance) {
 		providers.put(type, (ComponentProvider<T>) context -> instance);
 	}
 
+	public <T> void bind(Class<T> type, T instance, Annotation...  qualifiers) {
+		for(Annotation qualifier: qualifiers) {
+			components.put(new Component(type, qualifier), context -> instance);
+		}
+	}
+
+	public <T, I extends T> void bind(Class<T> type, Class<I> implementation,Annotation... qualifiers) {
+		for(Annotation qualifier : qualifiers){
+			components.put(new Component(type,qualifier),new InjectionProvider<>(implementation));
+		}
+	}
+
+
+
+	record Component(Class<?> type, Annotation qualifiers) {
+
+	}
+
+
 	public <T, I extends T> void bind(Class<T> type, Class<I> implementation) {
 		providers.put(type, new InjectionProvider<>(implementation));
 	}
+
+
+
 
 
 	public Context getContext() {
@@ -23,14 +46,17 @@ public class ContextConfig {
 		return new Context() {
 
 			@Override
-			public Optional<?> get(Ref ref) {
+			public <T> Optional<T> get(Ref<T> ref) {
+				if(ref.getQualifier() !=null) {
+					return Optional.ofNullable(components.get(new Component(ref.getComponent(),ref.getQualifier()))).map(x -> (T) x.get(this));
+				}
 				if (ref.isContainer()) {
 					if (ref.getContainer() != Provider.class) return Optional.empty();
 
-					return Optional.ofNullable(providers.get(ref.getComponent())).map(
-						provider -> (Provider<Object>) () -> provider.get(this));
+					return (Optional<T>) Optional.ofNullable(providers.get(ref.getComponent())).map(
+						provider -> (Provider<Object>) () -> (T) provider.get(this));
 				}
-				return Optional.ofNullable(providers.get(ref.getComponent())).map(x -> x.get(this));
+				return Optional.ofNullable(providers.get(ref.getComponent())).map(x -> (T) x.get(this));
 			}
 
 		};
@@ -49,6 +75,7 @@ public class ContextConfig {
 		}
 
 	}
+
 
 	interface ComponentProvider<T> {
 		T get(Context context);
