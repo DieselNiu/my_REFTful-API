@@ -7,11 +7,13 @@ public class ContextConfig {
 
 		 private Map<Component, ComponentProvider<?>> components = new HashMap<>();
 
-	public <T> void bind(Class<T> type, T instance) {
-		components.put(new Component(type, null), (ComponentProvider<T>) context -> instance);
-	}
+//	public <T> void bind(Class<T> type, T instance) {
+//		components.put(new Component(type, null), (ComponentProvider<T>) context -> instance);
+//	}
 
 	public <T> void bind(Class<T> type, T instance, Annotation... qualifiers) {
+		if(qualifiers.length ==0)
+			components.put(new Component(type, null), (ComponentProvider<T>) context -> instance);
 		for (Annotation qualifier : qualifiers) {
 			components.put(new Component(type, qualifier), context -> instance);
 		}
