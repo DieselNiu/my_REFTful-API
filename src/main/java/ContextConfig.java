@@ -1,30 +1,27 @@
 import jakarta.inject.Provider;
-import jakarta.inject.Qualifier;
 
 import java.lang.annotation.Annotation;
 import java.util.*;
 
 public class ContextConfig {
 
-	private Map<Class<?>, ComponentProvider<?>> providers = new HashMap<>();
-	private Map<Component, ComponentProvider<?>> components = new HashMap<>();
+		 private Map<Component, ComponentProvider<?>> components = new HashMap<>();
 
 	public <T> void bind(Class<T> type, T instance) {
-		providers.put(type, (ComponentProvider<T>) context -> instance);
+		components.put(new Component(type, null), (ComponentProvider<T>) context -> instance);
 	}
 
-	public <T> void bind(Class<T> type, T instance, Annotation...  qualifiers) {
-		for(Annotation qualifier: qualifiers) {
+	public <T> void bind(Class<T> type, T instance, Annotation... qualifiers) {
+		for (Annotation qualifier : qualifiers) {
 			components.put(new Component(type, qualifier), context -> instance);
 		}
 	}
 
-	public <T, I extends T> void bind(Class<T> type, Class<I> implementation,Annotation... qualifiers) {
-		for(Annotation qualifier : qualifiers){
-			components.put(new Component(type,qualifier),new InjectionProvider<>(implementation));
+	public <T, I extends T> void bind(Class<T> type, Class<I> implementation, Annotation... qualifiers) {
+		for (Annotation qualifier : qualifiers) {
+			components.put(new Component(type, qualifier), new InjectionProvider<>(implementation));
 		}
 	}
-
 
 
 	record Component(Class<?> type, Annotation qualifiers) {
@@ -33,43 +30,41 @@ public class ContextConfig {
 
 
 	public <T, I extends T> void bind(Class<T> type, Class<I> implementation) {
-		providers.put(type, new InjectionProvider<>(implementation));
+		components.put(new Component(type, null), new InjectionProvider<>(implementation));
 	}
 
 
-
-
-
 	public Context getContext() {
-		providers.keySet().forEach(component -> checkDependencies(component, new Stack<>()));
+		components.keySet().forEach(component -> checkDependencies(component, new Stack<>()));
 
 		return new Context() {
 
 			@Override
 			public <T> Optional<T> get(Ref<T> ref) {
-				if(ref.getQualifier() !=null) {
-					return Optional.ofNullable(components.get(new Component(ref.getComponent(),ref.getQualifier()))).map(x -> (T) x.get(this));
-				}
 				if (ref.isContainer()) {
 					if (ref.getContainer() != Provider.class) return Optional.empty();
 
-					return (Optional<T>) Optional.ofNullable(providers.get(ref.getComponent())).map(
+					return (Optional<T>) Optional.ofNullable(getProvider(ref)).map(
 						provider -> (Provider<Object>) () -> (T) provider.get(this));
 				}
-				return Optional.ofNullable(providers.get(ref.getComponent())).map(x -> (T) x.get(this));
+				return Optional.ofNullable(getProvider(ref)).map(x -> (T) x.get(this));
 			}
 
 		};
 	}
 
+	private <T> ComponentProvider<?> getProvider(Context.Ref<T> ref) {
+		return components.get(new Component(ref.getComponent(), ref.getQualifier()));
+	}
 
-	private void checkDependencies(Class<?> component, Stack<Class<?>> visiting) {
-		for (Context.Ref dependency : providers.get(component).getDependencies()) {
-			if (!providers.containsKey(dependency.getComponent())) throw new DependencyNotFoundException(component, dependency.getComponent());
+
+	private void checkDependencies(Component component, Stack<Class<?>> visiting) {
+		for (Context.Ref dependency : components.get(component).getDependencies()) {
+			if (!components.containsKey(new Component(dependency.getComponent(),dependency.getQualifier()))) throw new DependencyNotFoundException(component.type(), dependency.getComponent());
 			if (!dependency.isContainer()) {
 				if (visiting.contains(dependency.getComponent())) throw new CyclicDependenciesFoundException(visiting);
 				visiting.add(dependency.getComponent());
-				checkDependencies(dependency.getComponent(), visiting);
+				checkDependencies(new Component(dependency.getComponent(),dependency.getQualifier()), visiting);
 				visiting.pop();
 			}
 		}
