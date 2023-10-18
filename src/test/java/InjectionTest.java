@@ -23,8 +23,8 @@ public class InjectionTest {
 	@BeforeEach
 	void setUp() throws NoSuchFieldException {
 		dependencyType = (ParameterizedType) InjectionTest.class.getDeclaredField("dependencyProvider").getGenericType();
-		when(context.get(eq(Context.Ref.of(Dependency.class)))).thenReturn(Optional.of(dependency));
-		when(context.get(eq(Context.Ref.of(dependencyType)))).thenReturn(Optional.of(dependencyProvider));
+		when(context.get(eq(ComponentRef.of(Dependency.class)))).thenReturn(Optional.of(dependency));
+		when(context.get(eq(ComponentRef.of(dependencyType)))).thenReturn(Optional.of(dependencyProvider));
 	}
 
 	@Nested
@@ -50,14 +50,14 @@ public class InjectionTest {
 			@Test
 			public void should_include_dependency_from_inject_constructor() {
 				InjectionProvider<ComponentWithInjectConstructor> injectionProvider = new InjectionProvider<>(ComponentWithInjectConstructor.class);
-				assertArrayEquals(new Context.Ref[]{Context.Ref.of(Dependency.class)}, injectionProvider.getDependencies().toArray(Context.Ref[]::new));
+				assertArrayEquals(new ComponentRef[]{ComponentRef.of(Dependency.class)}, injectionProvider.getDependencies().toArray(ComponentRef[]::new));
 			}
 
 			//TODO: include dependency type from inject constructor
 			@Test
 			public void should_include_provider_type_from_inject_constructor() {
 				InjectionProvider<ProviderInjectConstructor> provider = new InjectionProvider<>(ProviderInjectConstructor.class);
-				assertArrayEquals(new Context.Ref[]{Context.Ref.of(dependencyType)}, provider.getDependencies().toArray(Context.Ref[]::new));
+				assertArrayEquals(new ComponentRef[]{ComponentRef.of(dependencyType)}, provider.getDependencies().toArray(ComponentRef[]::new));
 
 			}
 
@@ -157,7 +157,7 @@ public class InjectionTest {
 			@Test
 			public void should_throw_exception_when_field_dependency_missing() {
 				InjectionProvider<ComponentWithFieldInjection> provider = new InjectionProvider<>(ComponentWithFieldInjection.class);
-				assertArrayEquals(new Context.Ref[]{Context.Ref.of(Dependency.class)}, provider.getDependencies().toArray(Context.Ref[]::new));
+				assertArrayEquals(new ComponentRef[]{ComponentRef.of(Dependency.class)}, provider.getDependencies().toArray(ComponentRef[]::new));
 			}
 
 			//TODO: include dependency type  from inject field
@@ -166,7 +166,7 @@ public class InjectionTest {
 			@Test
 			public void should_include_provider_type_from_inject_field() {
 				InjectionProvider<ProviderInjectField> provider = new InjectionProvider<>(ProviderInjectField.class);
-				assertArrayEquals(new Context.Ref[]{Context.Ref.of(dependencyType)}, provider.getDependencies().toArray(Context.Ref[]::new));
+				assertArrayEquals(new ComponentRef[]{ComponentRef.of(dependencyType)}, provider.getDependencies().toArray(ComponentRef[]::new));
 			}
 
 
@@ -303,14 +303,14 @@ public class InjectionTest {
 			@Test
 			public void should_include_dependencies_from_inject_method() {
 				InjectionProvider<InjectMethodWithDependency> provider = new InjectionProvider<>(InjectMethodWithDependency.class);
-				assertArrayEquals(new Context.Ref[]{Context.Ref.of(Dependency.class)}, provider.getDependencies().toArray(Context.Ref[]::new));
+				assertArrayEquals(new ComponentRef[]{ComponentRef.of(Dependency.class)}, provider.getDependencies().toArray(ComponentRef[]::new));
 			}
 
 			//TODO: include dependency type  from inject method
 			@Test
 			public void should_include_provider_type_from_inject_method() {
 				InjectionProvider<ProviderInjectMethod> provider = new InjectionProvider<>(ProviderInjectMethod.class);
-				assertArrayEquals(new Context.Ref[]{Context.Ref.of(dependencyType)}, provider.getDependencies().toArray(Context.Ref[]::new));
+				assertArrayEquals(new ComponentRef[]{ComponentRef.of(dependencyType)}, provider.getDependencies().toArray(ComponentRef[]::new));
 			}
 
 
